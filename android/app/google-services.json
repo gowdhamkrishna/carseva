@@ -1,45 +1,46 @@
 {
   "project_info": {
-    "project_number": "327500572326",
-    "project_id": "carseva-eb8af",
-    "storage_bucket": "carseva-eb8af.firebasestorage.app"
+    "project_number": "280136763210",
+    "firebase_url": "https://carseva-f5a6e-default-rtdb.firebaseio.com",
+    "project_id": "carseva-f5a6e",
+    "storage_bucket": "carseva-f5a6e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:327500572326:android:436987bcac8ea012ffb667",
+        "mobilesdk_app_id": "1:280136763210:android:0c2524782c674eda72a3b3",
         "android_client_info": {
-          "package_name": "com.example.carseva"
+          "package_name": "com.carseva"
         }
       },
       "oauth_client": [
         {
-          "client_id": "327500572326-2ene87en2837dcjmdvdpid7ffc72cf3r.apps.googleusercontent.com",
+          "client_id": "280136763210-qmlt777lr6iatb37s5d5ic7jeptpiu41.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.carseva",
+            "package_name": "com.carseva",
             "certificate_hash": "9645f6b939be2d05ea2fc728d243c9858d14e0c5"
           }
         },
         {
-          "client_id": "327500572326-cf83v4aj36hu4qvgr6v2u6v9l1j4ropn.apps.googleusercontent.com",
+          "client_id": "280136763210-2i67ttp78k9jrq4f2f7l142d9url646b.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyC1SAEUzLz5qYLjQtHAdNub43ijBJzqKiw"
+          "current_key": "AIzaSyB7UTurVWRYxWllI6w5oXeJ4zF8AxtXraA"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "327500572326-cf83v4aj36hu4qvgr6v2u6v9l1j4ropn.apps.googleusercontent.com",
+              "client_id": "280136763210-2i67ttp78k9jrq4f2f7l142d9url646b.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "327500572326-7m5048mo8g0qqc4a6hj7sic97dim4lu9.apps.googleusercontent.com",
+              "client_id": "280136763210-g4h0i0st4q59jvbk9l80b2a9gr9duov3.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.example.carseva"

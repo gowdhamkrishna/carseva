@@ -19,6 +19,16 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
     required this.saveCurrentCar,
     required this.firebaseAuth,
   }) : super(const UserProfileInitial()) {
+    // Listen to auth state changes - auto-load on login, clear on logout
+    firebaseAuth.authStateChanges().listen((User? user) {
+      if (user != null) {
+        // User logged in - load their vehicle data
+        add(InitializeUserProfileEvent(user.uid));
+      } else {
+        // User logged out - clear profile
+        add(ClearProfileEvent());
+      }
+    });
     // Initialize user profile
     on<InitializeUserProfileEvent>((event, emit) async {
       emit(const UserProfileLoading());

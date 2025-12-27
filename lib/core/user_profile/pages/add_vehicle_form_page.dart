@@ -7,6 +7,8 @@ import 'package:carseva/carinfo/domain/usage_info.dart';
 import 'package:carseva/carinfo/domain/vehicle_info.dart';
 import 'package:carseva/core/user_profile/bloc/user_profile_bloc.dart';
 import 'package:carseva/core/user_profile/bloc/user_profile_event.dart';
+import 'package:carseva/core/constants/car_data_constants.dart';
+import 'package:carseva/core/widgets/autocomplete_text_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -117,14 +119,39 @@ class _AddVehicleFormPageState extends State<AddVehicleFormPage> {
       title: const Text('Vehicle Information', style: TextStyle(color: Colors.white)),
       content: Column(
         children: [
-          _buildTextField(_brandController, 'Brand', 'e.g., Honda, Toyota'),
-          _buildTextField(_modelController, 'Model', 'e.g., City, Fortuner'),
+          AutocompleteTextField(
+            controller: _brandController,
+            label: 'Brand',
+            hint: 'e.g., Honda, Toyota',
+            suggestions: CarDataConstants.brands,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Please enter brand';
+              return null;
+            },
+            onSelected: (brand) {
+              setState(() {
+                _modelController.clear();
+              });
+            },
+          ),
+          AutocompleteTextField(
+            controller: _modelController,
+            label: 'Model',
+            hint: 'e.g., City, Fortuner',
+            suggestions: _brandController.text.isEmpty
+                ? CarDataConstants.getAllModels()
+                : CarDataConstants.getModelsForBrand(_brandController.text),
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Please enter model';
+              return null;
+            },
+          ),
           _buildTextField(_variantController, 'Variant', 'e.g., VX CVT, ZX'),
           _buildTextField(_yearController, 'Year', 'e.g., 2023', isNumber: true),
-          _buildDropdown('Fuel Type', _fuelType, ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'], (val) {
+          _buildDropdown('Fuel Type', _fuelType, CarDataConstants.fuelTypes, (val) {
             setState(() => _fuelType = val!);
           }),
-          _buildDropdown('Transmission', _transmission, ['Manual', 'Automatic', 'CVT', 'AMT'], (val) {
+          _buildDropdown('Transmission', _transmission, CarDataConstants.transmissions, (val) {
             setState(() => _transmission = val!);
           }),
         ],
@@ -140,8 +167,26 @@ class _AddVehicleFormPageState extends State<AddVehicleFormPage> {
       content: Column(
         children: [
           _buildTextField(_regNumberController, 'Registration Number', 'e.g., MH12AB1234'),
-          _buildTextField(_stateController, 'State', 'e.g., Maharashtra'),
-          _buildTextField(_cityController, 'City', 'e.g., Mumbai'),
+          AutocompleteTextField(
+            controller: _stateController,
+            label: 'State',
+            hint: 'e.g., Maharashtra',
+            suggestions: CarDataConstants.states,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Please enter state';
+              return null;
+            },
+          ),
+          AutocompleteTextField(
+            controller: _cityController,
+            label: 'City',
+            hint: 'e.g., Mumbai',
+            suggestions: CarDataConstants.cities,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Please enter city';
+              return null;
+            },
+          ),
         ],
       ),
       isActive: _currentStep >= 1,

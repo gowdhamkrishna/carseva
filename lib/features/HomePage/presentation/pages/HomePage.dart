@@ -3,6 +3,13 @@ import 'package:carseva/features/car_market/presentation/pages/market_trends_pag
 import 'package:carseva/features/car_market/presentation/pages/availability_prediction_page.dart';
 import 'package:carseva/core/user_profile/widgets/vehicle_profile_card.dart';
 import 'package:carseva/core/user_profile/utils/predictive_maintenance.dart';
+import 'package:carseva/features/mechanics/presentation/pages/find_mechanics_page.dart';
+import 'package:carseva/core/user_profile/pages/vehicle_profile_settings_page.dart';
+import 'package:carseva/features/diagnostics/presentation/pages/diagnostic_dashboard_page.dart';
+import 'package:carseva/features/predictive_maintenance/presentation/pages/health_dashboard_page.dart';
+import 'package:carseva/features/market_trends/presentation/pages/ai_market_trends_page.dart';
+import 'package:carseva/features/vehicle_insights/presentation/pages/vehicle_insights_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -224,28 +231,44 @@ class _CarSevaHomeState extends State<CarSevaHome>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Car Seva',
+                'CarSeva',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  letterSpacing: 1.2,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
+              SizedBox(height: 4),
               Text(
-                'AI-Powered Car Care',
+                'Your AI Car Assistant',
                 style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF6C63FF),
-                  fontWeight: FontWeight.w500,
+                  color: Colors.white60,
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
           const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white, size: 22),
+            tooltip: 'Logout',
+            onPressed: () => _showLogoutDialog(context),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.1),
+              padding: const EdgeInsets.all(8),
+            ),
+          ),
           _buildAppBarButton(Icons.notifications_active, () {}),
           const SizedBox(width: 8),
-          _buildAppBarButton(Icons.tune, () {}),
+          _buildAppBarButton(Icons.settings, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VehicleProfileSettingsPage(),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -304,26 +327,30 @@ class _CarSevaHomeState extends State<CarSevaHome>
                   style: TextStyle(fontSize: 32),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Welcome Back!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getWelcomeMessage(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    Text(
-                      'How can we assist you today?',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 15,
+                      Text(
+                        'How can we assist you today?',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 15,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -341,16 +368,16 @@ class _CarSevaHomeState extends State<CarSevaHome>
         'subtitle': 'AI-powered analysis',
         'color': const Color(0xFF6C63FF),
         'delay': 0,
-        'onTap': null,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DiagnosticDashboardPage(),
+            ),
+          );
+        },
       },
-      {
-        'icon': Icons.camera_enhance,
-        'title': 'Damage\nDetection',
-        'subtitle': 'Image recognition',
-        'color': const Color(0xFFFF6584),
-        'delay': 100,
-        'onTap': null,
-      },
+
       {
         'icon': Icons.trending_up,
         'title': 'Market\nTrends',
@@ -361,7 +388,7 @@ class _CarSevaHomeState extends State<CarSevaHome>
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const MarketTrendsPage(),
+              builder: (context) => const AIMarketTrendsPage(),
             ),
           );
         },
@@ -370,9 +397,31 @@ class _CarSevaHomeState extends State<CarSevaHome>
         'icon': Icons.event_available,
         'title': 'Predictive\nMaintenance',
         'subtitle': 'Stay ahead',
+        'color': const Color(0xFF10B981),
+        'delay': 100,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const HealthDashboardPage(),
+            ),
+          );
+        },
+      },
+      {
+        'icon': Icons.search,
+        'title': 'Find\nMechanics',
+        'subtitle': 'Nearby services',
         'color': const Color(0xFFFF9800),
-        'delay': 300,
-        'onTap': null,
+        'delay': 200,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const FindMechanicsPage(),
+            ),
+          );
+        },
       },
     ];
 
@@ -550,16 +599,37 @@ class _CarSevaHomeState extends State<CarSevaHome>
             ),
             const SizedBox(height: 20),
             _buildQuickActionItem(
-              Icons.history,
-              'Service History',
-              'View past services & records',
-              const Color(0xFF6C63FF),
+              Icons.insights,
+              'Vehicle Insights',
+              'AI-powered tips for your car',
+              const Color(0xFF10B981),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const VehicleInsightsPage(
+                      make: 'Maruti Suzuki',
+                      model: 'Swift',
+                      year: 2020,
+                      mileage: 45000,
+                    ),
+                  ),
+                );
+              },
             ),
             _buildQuickActionItem(
               Icons.location_on_outlined,
               'Find Mechanics',
               'Locate nearby service centers',
               const Color(0xFF4CAF50),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FindMechanicsPage(),
+                  ),
+                );
+              },
             ),
             _buildQuickActionItem(
               Icons.chat_bubble_outline,
@@ -673,6 +743,76 @@ class _CarSevaHomeState extends State<CarSevaHome>
           ),
         ),
       ),
+    );
+  }
+
+  String _getWelcomeMessage() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Try to get display name first
+      if (user.displayName != null && user.displayName!.isNotEmpty) {
+        return 'Welcome, ${user.displayName}!';
+      }
+      // If no display name, extract name from email
+      if (user.email != null) {
+        String emailName = user.email!.split('@')[0];
+        // Capitalize first letter
+        emailName = emailName[0].toUpperCase() + emailName.substring(1);
+        return 'Welcome, $emailName!';
+      }
+    }
+    return 'Welcome Back!';
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.logout, color: Color(0xFFEF4444)),
+              SizedBox(width: 12),
+              Text('Logout'),
+            ],
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacementNamed('/login');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

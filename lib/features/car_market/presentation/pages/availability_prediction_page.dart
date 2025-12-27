@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:carseva/core/constants/car_data_constants.dart';
+import 'package:carseva/core/widgets/autocomplete_text_field.dart';
 import '../bloc/market_bloc.dart';
 import '../bloc/market_event.dart';
 import '../bloc/market_state.dart';
@@ -185,11 +187,17 @@ class _AvailabilityPredictionPageState
             ),
           ),
           const SizedBox(height: 20),
-          _buildTextField(
+          AutocompleteTextField(
             controller: _carModelController,
             label: 'Car Model *',
             hint: 'e.g., Honda City, Maruti Swift',
-            icon: Icons.directions_car,
+            suggestions: CarDataConstants.getAllModels(),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter car model';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 16),
           const Text(
@@ -201,11 +209,17 @@ class _AvailabilityPredictionPageState
             ),
           ),
           const SizedBox(height: 20),
-          _buildTextField(
+          AutocompleteTextField(
             controller: _cityController,
             label: 'City *',
             hint: 'e.g., Mumbai, Delhi, Bangalore',
-            icon: Icons.location_city,
+            suggestions: CarDataConstants.cities,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter city';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 16),
           _buildTextField(
