@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/availability_prediction.dart';
+import 'location_list_widget.dart';
 
 class PredictionResultCard extends StatelessWidget {
   final AvailabilityPrediction prediction;
@@ -101,7 +102,7 @@ class PredictionResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _buildWaitingPeriodCard(),
-          if (prediction.insights != null) ...[
+          if (prediction.insights != null) ...[ 
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
@@ -116,8 +117,8 @@ class PredictionResultCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(
                         Icons.lightbulb_outline,
                         color: Color(0xFF6C63FF),
@@ -147,6 +148,8 @@ class PredictionResultCard extends StatelessWidget {
               ),
             ),
           ],
+          // Add location list
+          LocationListWidget(locations: prediction.availableLocations),
         ],
       ),
     );

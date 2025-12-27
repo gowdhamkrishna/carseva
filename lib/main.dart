@@ -26,6 +26,14 @@ import 'package:carseva/features/car_market/domain/usecases/predict_availability
 import 'package:carseva/features/car_market/domain/usecases/get_price_prediction.dart';
 import 'package:carseva/features/car_market/presentation/bloc/market_bloc.dart';
 
+import 'package:carseva/carinfo/data/datasource/data_source.dart';
+import 'package:carseva/carinfo/domain/repositories/implem.dart';
+import 'package:carseva/carinfo/domain/usecases/get_current_car.dart';
+import 'package:carseva/carinfo/domain/usecases/save_current.dart';
+import 'package:carseva/core/user_profile/bloc/user_profile_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:carseva/features/splashscreen/presentation/pages/splash.dart';
 
 Future<void> main() async {
@@ -48,6 +56,12 @@ Future<void> main() async {
   final getMarketInsights = GetMarketInsights(marketRepository);
   final predictAvailability = PredictAvailability(marketRepository);
   final getPricePrediction = GetPricePrediction(marketRepository);
+
+  // ✅ CAR INFO DEPENDENCY CHAIN
+  final carInfoDataSource = UserCarRemoteDataSource(FirebaseFirestore.instance);
+  final carInfoRepository = UserCarRepositoryImpl(carInfoDataSource);
+  final getCurrentCar = GetCurrentCar(carInfoRepository);
+  final saveCurrentCar = SaveCurrentCar(carInfoRepository);
 
   runApp(
     MultiBlocProvider(
@@ -79,6 +93,15 @@ Future<void> main() async {
             registerUseCase: RegisterUseCase(AuthRepositoryImpl()),
             googleLoginUseCase: GoogleLoginUseCase(AuthRepositoryImpl()),
           )..add(CheckAuthStatusEvent()),
+        ),
+
+        // 👤 USER PROFILE
+        BlocProvider(
+          create: (_) => UserProfileBloc(
+            getCurrentCar: getCurrentCar,
+            saveCurrentCar: saveCurrentCar,
+            firebaseAuth: FirebaseAuth.instance,
+          ),
         ),
       ],
       child: const HomePage(),

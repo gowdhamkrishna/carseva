@@ -1,6 +1,8 @@
 import 'package:carseva/features/voice_search/presentation/voice_search.dart';
 import 'package:carseva/features/car_market/presentation/pages/market_trends_page.dart';
 import 'package:carseva/features/car_market/presentation/pages/availability_prediction_page.dart';
+import 'package:carseva/core/user_profile/widgets/vehicle_profile_card.dart';
+import 'package:carseva/core/user_profile/utils/predictive_maintenance.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -77,6 +79,17 @@ class _CarSevaHomeState extends State<CarSevaHome>
                       child: Column(
                         children: [
                           _buildWelcomeSection(),
+                          // Vehicle Profile Card (shows details or add button)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            child: VehicleProfileCard(),
+                          ),
+                          // Maintenance Alerts
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: MaintenanceAlertsWidget(),
+                          ),
+                          const SizedBox(height: 10),
                           _buildFeaturesGrid(),
                           _buildQuickActions(),
                           const SizedBox(height: 20),

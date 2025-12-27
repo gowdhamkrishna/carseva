@@ -24,6 +24,8 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
 
   late SpeechToText _speech;
   late ScrollController _scrollController;
+  late TextEditingController _textController;
+  late FocusNode _focusNode;
 
   bool isListening = false;
   String recognizedText = '';
@@ -34,6 +36,13 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
 
     _speech = SpeechToText();
     _scrollController = ScrollController();
+    _textController = TextEditingController();
+    _focusNode = FocusNode();
+
+    // Listen to text changes to update button state
+    _textController.addListener(() {
+      setState(() {});
+    });
 
     _pulseController =
         AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))
@@ -59,6 +68,8 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
     _waveController.dispose();
     _rotateController.dispose();
     _scrollController.dispose();
+    _textController.dispose();
+    _focusNode.dispose();
     _speech.stop();
     super.dispose();
   }
@@ -113,6 +124,15 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
         context.read<AiBloc>().add(AskAiEvent(recognizedText));
         recognizedText = '';
       }
+    }
+  }
+
+  void _sendTextMessage() {
+    final text = _textController.text.trim();
+    if (text.isNotEmpty) {
+      context.read<AiBloc>().add(AskAiEvent(text));
+      _textController.clear();
+      _focusNode.unfocus();
     }
   }
 
@@ -296,7 +316,7 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                "Tap the microphone below to ask me about car maintenance, diagnostics, or service centers",
+                "Type your message or tap the microphone to ask about car maintenance, diagnostics, or service centers",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.7),
@@ -317,7 +337,7 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
       left: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -325,41 +345,118 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
             colors: [
               Colors.transparent,
               const Color(0xFF0A0E27).withOpacity(0.95),
+              const Color(0xFF0A0E27),
             ],
           ),
         ),
-        child: Center(
-          child: GestureDetector(
-            onTap: _toggleListening,
-            child: AnimatedBuilder(
-              animation: _pulseController,
-              builder: (_, __) => Container(
-                width: 70,
-                height: 70,
+        child: Row(
+          children: [
+            // Text input field
+            Expanded(
+              child: Container(
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isListening
-                      ? const Color(0xFFFF6584)
-                      : const Color(0xFF6C63FF),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isListening
-                              ? const Color(0xFFFF6584)
-                              : const Color(0xFF6C63FF))
-                          .withOpacity(isListening ? 0.6 : 0.4),
-                      blurRadius: 25,
-                      spreadRadius: 8,
-                    ),
-                  ],
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF1A1F3A).withOpacity(0.8),
+                      const Color(0xFF2D3561).withOpacity(0.6),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: const Color(0xFF6C63FF).withOpacity(0.3),
+                    width: 1.5,
+                  ),
                 ),
-                child: Icon(
-                  isListening ? Icons.mic : Icons.mic_none,
-                  size: 32,
-                  color: Colors.white,
+                child: TextField(
+                  controller: _textController,
+                  focusNode: _focusNode,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Type your message...',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 16,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.chat_bubble_outline,
+                      color: const Color(0xFF6C63FF).withOpacity(0.7),
+                      size: 22,
+                    ),
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendTextMessage(),
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
                 ),
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            // Voice/Send button
+            GestureDetector(
+              onTap: () {
+                if (_textController.text.trim().isNotEmpty) {
+                  _sendTextMessage();
+                } else {
+                  _toggleListening();
+                }
+              },
+              child: AnimatedBuilder(
+                animation: _pulseController,
+                builder: (_, __) => Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: isListening
+                          ? [
+                              const Color(0xFFFF6584),
+                              const Color(0xFFFF6584).withOpacity(0.8),
+                            ]
+                          : _textController.text.trim().isNotEmpty
+                              ? [
+                                  const Color(0xFF4CAF50),
+                                  const Color(0xFF4CAF50).withOpacity(0.8),
+                                ]
+                              : [
+                                  const Color(0xFF6C63FF),
+                                  const Color(0xFF6C63FF).withOpacity(0.8),
+                                ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isListening
+                                ? const Color(0xFFFF6584)
+                                : _textController.text.trim().isNotEmpty
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFF6C63FF))
+                            .withOpacity(isListening ? 0.6 : 0.4),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    isListening
+                        ? Icons.mic
+                        : _textController.text.trim().isNotEmpty
+                            ? Icons.send
+                            : Icons.mic_none,
+                    size: 26,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

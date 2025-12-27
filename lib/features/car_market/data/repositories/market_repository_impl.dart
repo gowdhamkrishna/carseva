@@ -119,13 +119,32 @@ Return a JSON object with:
 - availabilityLikelihood: Number between 0.0 and 1.0 (probability)
 - expectedWaitingPeriod: Number of days (0 if available immediately)
 - insights: Brief explanation (2-3 sentences) about availability factors
+- locations: Array of 3-6 specific places where this car can be found, each with:
+  - name: Dealership/showroom name (e.g., "Honda City Showroom")
+  - address: Full address
+  - type: One of ["dealership", "showroom", "serviceCenter"]
+  - distanceKm: Distance from area in km (number)
+  - phoneNumber: Contact number (optional)
+  - stockStatus: One of ["inStock", "limitedStock", "preOrder", "outOfStock"]
+  - operatingHours: Business hours (optional, e.g., "9 AM - 7 PM")
 
 Return ONLY valid JSON, no markdown. Example:
 {
   "demandLevel": "high",
-  "availabilityLikelihood": 0.3,
-  "expectedWaitingPeriod": 45,
-  "insights": "High demand in this area with limited inventory. Expect 4-6 weeks waiting period due to popular variant preference."
+  "availabilityLikelihood": 0.7,
+  "expectedWaitingPeriod": 15,
+  "insights": "Moderate demand with good availability. Several authorized dealers in the area.",
+  "locations": [
+    {
+      "name": "Honda Premium Showroom",
+      "address": "123 Main Road, $area, $city",
+      "type": "showroom",
+      "distanceKm": 2.5,
+      "phoneNumber": "+91 98765 43210",
+      "stockStatus": "inStock",
+      "operatingHours": "9 AM - 8 PM"
+    }
+  ]
 }''';
 
     try {
@@ -140,6 +159,13 @@ Return ONLY valid JSON, no markdown. Example:
 
       final Map<String, dynamic> json = jsonDecode(responseText);
 
+      // Parse locations
+      List<CarLocation> locations = [];
+      if (json['locations'] != null) {
+        final locationsJson = json['locations'] as List<dynamic>;
+        locations = locationsJson.map((loc) => _parseLocation(loc)).toList();
+      }
+
       return AvailabilityPrediction(
         carModelId: carModel.toLowerCase().replaceAll(' ', '_'),
         carName: carModel,
@@ -150,6 +176,7 @@ Return ONLY valid JSON, no markdown. Example:
         availabilityLikelihood: (json['availabilityLikelihood'] as num).toDouble(),
         expectedWaitingPeriod: json['expectedWaitingPeriod'] as int,
         insights: json['insights'] as String?,
+        availableLocations: locations,
       );
     } catch (e) {
       throw Exception('Failed to predict availability: $e');
@@ -276,6 +303,54 @@ Return ONLY valid JSON, no markdown. Example:
       default:
         return DemandLevel.medium;
     }
+  }
+
+  LocationType _parseLocationType(String type) {
+    switch (type.toLowerCase()) {
+      case 'dealership':
+        return LocationType.dealership;
+      case 'showroom':
+        return LocationType.showroom;
+      case 'servicecenter':
+      case 'service_center':
+        return LocationType.serviceCenter;
+      default:
+        return LocationType.dealership;
+    }
+  }
+
+  StockStatus _parseStockStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'instock':
+      case 'in_stock':
+        return StockStatus.inStock;
+      case 'limitedstock':
+      case 'limited_stock':
+        return StockStatus.limitedStock;
+      case 'preorder':
+      case 'pre_order':
+        return StockStatus.preOrder;
+      case 'outofstock':
+      case 'out_of_stock':
+        return StockStatus.outOfStock;
+      default:
+        return StockStatus.inStock;
+    }
+  }
+
+  CarLocation _parseLocation(Map<String, dynamic> json) {
+    return CarLocation(
+      name: json['name'] as String,
+      address: json['address'] as String,
+      type: _parseLocationType(json['type'] as String),
+      distanceKm: (json['distanceKm'] as num).toDouble(),
+      phoneNumber: json['phoneNumber'] as String?,
+      website: json['website'] as String?,
+      stockStatus: _parseStockStatus(json['stockStatus'] as String),
+      operatingHours: json['operatingHours'] as String?,
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+    );
   }
 }
 
