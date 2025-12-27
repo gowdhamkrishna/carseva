@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "327500572326",
+    "project_id": "carseva-eb8af",
+    "storage_bucket": "carseva-eb8af.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327500572326:android:436987bcac8ea012ffb667",
+        "android_client_info": {
+          "package_name": "com.example.carseva"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "327500572326-2ene87en2837dcjmdvdpid7ffc72cf3r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.carseva",
+            "certificate_hash": "9645f6b939be2d05ea2fc728d243c9858d14e0c5"
+          }
+        },
+        {
+          "client_id": "327500572326-cf83v4aj36hu4qvgr6v2u6v9l1j4ropn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1SAEUzLz5qYLjQtHAdNub43ijBJzqKiw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "327500572326-cf83v4aj36hu4qvgr6v2u6v9l1j4ropn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "327500572326-7m5048mo8g0qqc4a6hj7sic97dim4lu9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.carseva"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
