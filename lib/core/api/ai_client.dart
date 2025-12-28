@@ -12,7 +12,7 @@ class GeminiClient {
     }
 
     textModel = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-flash-lite',
       apiKey: apiKey,
       systemInstruction: systemInstruction != null
           ? Content.system(systemInstruction)
