@@ -4,6 +4,8 @@ import 'package:carseva/core/widgets/ai_analyzing_animation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:carseva/core/api/ai_client.dart';
+
 class AIMarketTrendsPage extends StatefulWidget {
   const AIMarketTrendsPage({super.key});
 
@@ -14,6 +16,7 @@ class AIMarketTrendsPage extends StatefulWidget {
 class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTickerProviderStateMixin {
   bool _showNewCars = true;
   bool _isLoading = true;
+  String? _errorMessage;
   Map<String, dynamic>? _marketData;
   late MarketAnalysisAIService _aiService;
   late AnimationController _animController;
@@ -26,12 +29,8 @@ class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTick
       vsync: this,
     );
     
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-    final model = GenerativeModel(
-      model: 'gemini-1.5-flash',
-      apiKey: apiKey,
-    );
-    _aiService = MarketAnalysisAIService(model);
+    final client = GeminiClient();
+    _aiService = MarketAnalysisAIService(GoogleGenerativeAIClient(client.textModel));
     
     _loadMarketData();
   }
@@ -43,18 +42,29 @@ class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTick
   }
 
   Future<void> _loadMarketData() async {
-    setState(() => _isLoading = true);
-    
-    final data = await _aiService.getMarketTrends(
-      segment: _showNewCars ? 'new' : 'used',
-    );
-    
     setState(() {
-      _marketData = data;
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
     
-    _animController.forward(from: 0);
+    try {
+      final data = await _aiService.getMarketTrends(
+        segment: _showNewCars ? 'new' : 'used',
+      );
+      
+      setState(() {
+        _marketData = data;
+        _isLoading = false;
+      });
+      
+      _animController.forward(from: 0);
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+        _marketData = null;
+      });
+    }
   }
 
   void _toggleSegment(bool showNew) {
@@ -79,7 +89,36 @@ class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTick
       ),
       body: _isLoading
           ? const AIAnalyzingAnimation(message: 'Analyzing market trends')
-          : _buildContent(),
+          : _errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Failed to load market trends',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _loadMarketData,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : _buildContent(),
     );
   }
 
@@ -173,20 +212,22 @@ class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTick
 
   Widget _buildPriceTrendCard(Map<String, dynamic> priceTrend) {
     final months = (priceTrend['months'] as List?)?.cast<String>() ?? [];
-    final values = (priceTrend['values'] as List?)?.cast<int>() ?? [];
+    final values = (priceTrend['values'] as List?)
+        ?.map((e) => (e as num).toDouble())
+        .toList() ?? [];
     
     if (months.isEmpty || values.isEmpty) return const SizedBox.shrink();
 
-    final maxValue = values.reduce((a, b) => a > b ? a : b).toDouble();
-    final minValue = values.reduce((a, b) => a < b ? a : b).toDouble();
+    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final minValue = values.reduce((a, b) => a < b ? a : b);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF4CAF50).withOpacity(0.8),
-            const Color(0xFF66BB6A).withOpacity(0.8),
+            const Color(0xFF4CAF50).withValues(alpha: 0.8),
+            const Color(0xFF66BB6A).withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -194,7 +235,7 @@ class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTick
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4CAF50).withOpacity(0.3),
+            color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -234,9 +275,9 @@ class _AIMarketTrendsPageState extends State<AIMarketTrendsPage> with SingleTick
     );
   }
 
-  Widget _buildAnimatedBarChart(List<String> months, List<int> values, double maxValue) {
+  Widget _buildAnimatedBarChart(List<String> months, List<double> values, double maxValue) {
     return SizedBox(
-      height: 120,
+      height: 140, // Increased height to prevent overflow
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.end,

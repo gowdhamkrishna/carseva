@@ -1,10 +1,28 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:convert';
 
-class MarketAnalysisAIService {
-  final GenerativeModel model;
 
-  MarketAnalysisAIService(this.model);
+// Interface for AI operations to allow mocking
+abstract class GenerativeAIClient {
+  Future<GenerateContentResponse> generateContent(Iterable<Content> prompt);
+}
+
+// Concrete implementation using Google Generative AI
+class GoogleGenerativeAIClient implements GenerativeAIClient {
+  final GenerativeModel _model;
+  
+  GoogleGenerativeAIClient(this._model);
+  
+  @override
+  Future<GenerateContentResponse> generateContent(Iterable<Content> prompt) {
+    return _model.generateContent(prompt);
+  }
+}
+
+class MarketAnalysisAIService {
+  final GenerativeAIClient _client;
+
+  MarketAnalysisAIService(this._client);
 
   Future<Map<String, dynamic>> getMarketTrends({
     required String segment, // 'new' or 'used'
@@ -16,7 +34,7 @@ class MarketAnalysisAIService {
     try {
       print('📊 Requesting market analysis from AI...');
       
-      final response = await model.generateContent([Content.text(prompt)])
+      final response = await _client.generateContent([Content.text(prompt)])
           .timeout(
         const Duration(seconds: 30),
         onTimeout: () {
@@ -41,7 +59,7 @@ class MarketAnalysisAIService {
       return jsonResponse;
     } catch (e) {
       print('❌ Error in market analysis: $e');
-      return _getFallbackData(segment);
+      throw Exception('Failed to fetch market data: $e');
     }
   }
 
@@ -90,39 +108,9 @@ Sales in units/month, prices in INR.''';
         return json.decode(jsonMatch.group(0)!);
       } catch (e) {
         print('❌ JSON decode error: $e');
-        return {};
+        throw Exception('Failed to parse AI response');
       }
     }
-    return {};
-  }
-
-  Map<String, dynamic> _getFallbackData(String segment) {
-    if (segment == 'new') {
-      return {
-        'topCars': [
-          {'name': 'Maruti Swift', 'segment': 'Hatchback', 'sales': 22000, 'avgPrice': 750000, 'priceChange': 3.2},
-          {'name': 'Hyundai Creta', 'segment': 'SUV', 'sales': 18000, 'avgPrice': 1500000, 'priceChange': 4.5},
-          {'name': 'Tata Nexon', 'segment': 'SUV', 'sales': 16000, 'avgPrice': 1200000, 'priceChange': 5.2},
-        ],
-        'priceTrend': {
-          'months': ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          'values': [100, 102, 104, 106, 108, 110]
-        },
-        'insights': ['Market data unavailable', 'Please check your connection']
-      };
-    } else {
-      return {
-        'topCars': [
-          {'name': 'Swift (2018-20)', 'segment': 'Hatchback', 'sales': 8000, 'avgPrice': 450000, 'priceChange': -5.2},
-          {'name': 'Creta (2018-20)', 'segment': 'SUV', 'sales': 6000, 'avgPrice': 950000, 'priceChange': -6.8},
-          {'name': 'Nexon (2019-21)', 'segment': 'SUV', 'sales': 5500, 'avgPrice': 750000, 'priceChange': -5.5},
-        ],
-        'priceTrend': {
-          'months': ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          'values': [100, 98, 96, 94, 92, 90]
-        },
-        'insights': ['Market data unavailable', 'Please check your connection']
-      };
-    }
+    throw Exception('No valid JSON found in response');
   }
 }
