@@ -1,10 +1,11 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:carseva/core/api/ai_client.dart';
+import 'package:carseva/core/utils/json_extractor.dart';
 import 'dart:convert';
 
 class VehicleInsightsAIService {
-  final GenerativeModel model;
+  final _aiClient = UnifiedAIClient();
 
-  VehicleInsightsAIService(this.model);
+  VehicleInsightsAIService();
 
   Future<Map<String, dynamic>> getVehicleInsights({
     required String make,
@@ -20,24 +21,14 @@ class VehicleInsightsAIService {
     );
 
     try {
-      print('🚗 Requesting vehicle insights from AI...');
-      
-      final response = await this.model.generateContent([Content.text(prompt)])
-          .timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Request timed out');
-        },
-      );
-      
-      final responseText = response.text;
+      final responseText = await _aiClient.generateContent(prompt, systemInstruction: 'Provide personalized vehicle insights and respond ONLY with valid JSON.');
       print('✅ Vehicle insights received');
       
       if (responseText == null || responseText.isEmpty) {
         throw Exception('Empty response from AI');
       }
       
-      final jsonResponse = _extractJson(responseText);
+      final jsonResponse = JsonExtractor.extractObject(responseText);
       
       if (jsonResponse.isEmpty) {
         throw Exception('Failed to parse AI response');
@@ -93,24 +84,6 @@ Respond ONLY with valid JSON (no markdown):
 }
 
 Provide realistic Indian market data. Costs in INR.''';
-  }
-
-  Map<String, dynamic> _extractJson(String text) {
-    String cleanText = text.trim();
-    cleanText = cleanText.replaceAll(RegExp(r'```json\s*'), '');
-    cleanText = cleanText.replaceAll(RegExp(r'```\s*$'), '');
-    cleanText = cleanText.trim();
-    
-    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(cleanText);
-    if (jsonMatch != null) {
-      try {
-        return json.decode(jsonMatch.group(0)!);
-      } catch (e) {
-        print('❌ JSON decode error: $e');
-        return {};
-      }
-    }
-    return {};
   }
 
   Map<String, dynamic> _getFallbackInsights(String make, String model, int year, int mileage) {

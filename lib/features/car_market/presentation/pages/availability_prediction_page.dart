@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:carseva/core/constants/car_data_constants.dart';
 import 'package:carseva/core/widgets/autocomplete_text_field.dart';
+import 'dart:ui';
+import 'dart:math' as math;
 import '../bloc/market_bloc.dart';
 import '../bloc/market_event.dart';
 import '../bloc/market_state.dart';
@@ -16,11 +18,21 @@ class AvailabilityPredictionPage extends StatefulWidget {
 }
 
 class _AvailabilityPredictionPageState
-    extends State<AvailabilityPredictionPage> {
+    extends State<AvailabilityPredictionPage> with SingleTickerProviderStateMixin {
   final _carModelController = TextEditingController();
   final _areaController = TextEditingController();
   final _cityController = TextEditingController();
   final _pincodeController = TextEditingController();
+  late AnimationController _rotateController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotateController = AnimationController(
+      duration: const Duration(seconds: 20),
+      vsync: this,
+    )..repeat();
+  }
 
   @override
   void dispose() {
@@ -28,6 +40,7 @@ class _AvailabilityPredictionPageState
     _areaController.dispose();
     _cityController.dispose();
     _pincodeController.dispose();
+    _rotateController.dispose();
     super.dispose();
   }
 
@@ -56,6 +69,72 @@ class _AvailabilityPredictionPageState
         );
   }
 
+  Widget _buildGlassContainer({required Widget child, double sigma = 10, double borderRadius = 24}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedBackground() {
+    return AnimatedBuilder(
+      animation: _rotateController,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            Positioned(
+              top: -80,
+              right: -100,
+              child: Transform.rotate(
+                angle: _rotateController.value * 2 * math.pi,
+                child: Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [const Color(0xFF6C63FF).withOpacity(0.12), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -120,
+              left: -80,
+              child: Transform.rotate(
+                angle: -_rotateController.value * 2 * math.pi,
+                child: Container(
+                  width: 360,
+                  height: 360,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [const Color(0xFF10B981).withOpacity(0.08), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,200 +144,253 @@ class _AvailabilityPredictionPageState
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0A0E27),
-              Color(0xFF1A1F3A),
-              Color(0xFF0F1535),
+              Color(0xFF030712),
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
             ],
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAppBar(),
-                const SizedBox(height: 24),
-                _buildForm(),
-                const SizedBox(height: 24),
-                BlocBuilder<MarketBloc, MarketState>(
-                  builder: (context, state) {
-                    if (state is MarketLoading) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32.0),
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF6C63FF),
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (state is AvailabilityPredicted) {
-                      return PredictionResultCard(
-                        prediction: state.prediction,
-                      );
-                    }
-
-                    if (state is MarketError) {
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                state.message,
-                                style: const TextStyle(color: Colors.white),
+        child: Stack(
+          children: [
+            _buildAnimatedBackground(),
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAppBar(),
+                    const SizedBox(height: 28),
+                    _buildForm(),
+                    const SizedBox(height: 24),
+                    BlocBuilder<MarketBloc, MarketState>(
+                      builder: (context, state) {
+                        if (state is MarketLoading) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(40.0),
+                              child: Column(
+                                children: [
+                                  const CircularProgressIndicator(
+                                    color: Color(0xFF6C63FF),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Finding dealerships near you…',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.6),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    }
+                          );
+                        }
 
-                    return const SizedBox.shrink();
-                  },
+                        if (state is AvailabilityPredicted) {
+                          return PredictionResultCard(
+                            prediction: state.prediction,
+                          );
+                        }
+
+                        if (state is MarketError) {
+                          return _buildGlassContainer(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      state.message,
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildAppBar() {
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        const SizedBox(width: 8),
-        const Icon(Icons.location_searching,
-            color: Color(0xFF6C63FF), size: 28),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
-            'Availability Prediction',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildForm() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1A1F3A).withOpacity(0.8),
-            const Color(0xFF2D3561).withOpacity(0.6),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Car Details',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          AutocompleteTextField(
-            controller: _carModelController,
-            label: 'Car Model *',
-            hint: 'e.g., Honda City, Maruti Swift',
-            suggestions: CarDataConstants.getAllModels(),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter car model';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Location Details',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          AutocompleteTextField(
-            controller: _cityController,
-            label: 'City *',
-            hint: 'e.g., Mumbai, Delhi, Bangalore',
-            suggestions: CarDataConstants.cities,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter city';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _areaController,
-            label: 'Area / Locality *',
-            hint: 'e.g., Andheri, Connaught Place',
-            icon: Icons.place,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _pincodeController,
-            label: 'Pincode (Optional)',
-            hint: 'e.g., 400053',
-            icon: Icons.pin,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _predictAvailability,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
+    return _buildGlassContainer(
+      sigma: 15,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
+                child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
               ),
-              child: const Text(
-                'Predict Availability',
+            ),
+            const SizedBox(width: 16),
+            const Icon(Icons.location_searching, color: Color(0xFF6C63FF), size: 26),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Availability Prediction',
                 style: TextStyle(
-                  fontSize: 16,
+                  color: Colors.white,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildForm() {
+    return _buildGlassContainer(
+      sigma: 15,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(Icons.directions_car, 'Car Details', const Color(0xFF6C63FF)),
+            const SizedBox(height: 20),
+            AutocompleteTextField(
+              controller: _carModelController,
+              label: 'Car Model *',
+              hint: 'e.g., Honda City, Maruti Swift',
+              suggestions: CarDataConstants.getAllModels(),
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Please enter car model';
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            _buildSectionHeader(Icons.location_on_outlined, 'Location Details', const Color(0xFF10B981)),
+            const SizedBox(height: 20),
+            AutocompleteTextField(
+              controller: _cityController,
+              label: 'City *',
+              hint: 'e.g., Mumbai, Delhi, Bangalore',
+              suggestions: CarDataConstants.cities,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Please enter city';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _areaController,
+              label: 'Area / Locality *',
+              hint: 'e.g., Andheri, Connaught Place',
+              icon: Icons.place,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: _pincodeController,
+              label: 'Pincode (Optional)',
+              hint: 'e.g., 400053',
+              icon: Icons.pin,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _predictAvailability,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ).copyWith(
+                  backgroundColor: WidgetStateProperty.all(Colors.transparent),
+                  shadowColor: WidgetStateProperty.all(Colors.transparent),
+                ),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6C63FF), Color(0xFF3F3D9E)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withOpacity(0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    alignment: Alignment.center,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search, color: Colors.white),
+                        SizedBox(width: 12),
+                        Text(
+                          'Predict Availability',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(IconData icon, String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -282,19 +414,18 @@ class _AvailabilityPredictionPageState
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
         ),
       ),
     );
   }
 }
-

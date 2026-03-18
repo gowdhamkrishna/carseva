@@ -3,37 +3,26 @@ import 'package:carseva/carinfo/domain/usecases/save_current.dart';
 import 'package:carseva/core/user_profile/bloc/user_profile_event.dart';
 import 'package:carseva/core/user_profile/bloc/user_profile_state.dart';
 import 'package:carseva/core/user_profile/domain/user_profile.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/core/auth/local_user.dart';
+import 'package:carseva/features/auth/data/repositories/auth_implement.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Global BLoC managing user vehicle profile state
 class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
   final GetCurrentCar getCurrentCar;
   final SaveCurrentCar saveCurrentCar;
-  final FirebaseAuth firebaseAuth;
 
   UserProfile? _currentProfile;
 
   UserProfileBloc({
     required this.getCurrentCar,
     required this.saveCurrentCar,
-    required this.firebaseAuth,
   }) : super(const UserProfileInitial()) {
-    // Listen to auth state changes - auto-load on login, clear on logout
-    firebaseAuth.authStateChanges().listen((User? user) {
-      if (user != null) {
-        // User logged in - load their vehicle data
-        add(InitializeUserProfileEvent(user.uid));
-      } else {
-        // User logged out - clear profile
-        add(ClearProfileEvent());
-      }
-    });
     // Initialize user profile
     on<InitializeUserProfileEvent>((event, emit) async {
       emit(const UserProfileLoading());
       try {
-        final user = firebaseAuth.currentUser;
+        final user = await AuthRepositoryImpl.getCurrentUser();
         if (user == null) {
           emit(const UserProfileInitial());
           return;
@@ -44,9 +33,9 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
 
         _currentProfile = UserProfile(
           userId: user.uid,
-          email: user.email ?? '',
+          email: user.email,
           displayName: user.displayName,
-          photoUrl: user.photoURL,
+          photoUrl: user.photoUrl,
           vehicle: vehicle,
           lastUpdated: DateTime.now(),
         );
@@ -65,7 +54,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
     on<UpdateVehicleEvent>((event, emit) async {
       emit(const UserProfileLoading());
       try {
-        // Save to Firestore
+        // Save locally
         await saveCurrentCar(
           userId: event.userId,
           car: event.vehicle,
@@ -79,7 +68,6 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
 
         if (_currentProfile != null) {
           emit(VehicleUpdated(_currentProfile!));
-          // Transition to loaded state
           emit(UserProfileLoaded(_currentProfile!));
         }
       } catch (e) {

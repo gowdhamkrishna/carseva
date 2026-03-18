@@ -2,16 +2,16 @@ import 'package:carseva/features/diagnostics/domain/entities/diagnostic_entity.d
 import 'package:carseva/features/diagnostics/domain/entities/symptom.dart';
 import 'package:carseva/features/diagnostics/domain/repositories/diagnostic_repository.dart';
 import 'package:carseva/features/diagnostics/data/datasources/diagnostic_ai_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:carseva/core/storage/local_storage_service.dart';
 import 'package:carseva/features/diagnostics/domain/entities/severity_level.dart';
 
 class DiagnosticRepositoryImpl implements DiagnosticRepository {
   final DiagnosticAIService aiService;
-  final FirebaseFirestore firestore;
+  final LocalStorageService storage;
 
   DiagnosticRepositoryImpl({
     required this.aiService,
-    required this.firestore,
+    required this.storage,
   });
 
   @override
@@ -44,10 +44,9 @@ class DiagnosticRepositoryImpl implements DiagnosticRepository {
       carContext: carContext,
     );
 
-    // Save to Firestore (non-blocking, don't wait for it)
+    // Save locally (non-blocking)
     saveDiagnostic(diagnostic).catchError((error) {
-      print('⚠️ Failed to save diagnostic to Firestore: $error');
-      print('💡 Tip: Create Firestore database to enable history saving');
+      print('⚠️ Failed to save diagnostic locally: $error');
     });
 
     return diagnostic;
@@ -60,23 +59,18 @@ class DiagnosticRepositoryImpl implements DiagnosticRepository {
     int limit = 10,
   }) async {
     try {
-      Query query = firestore
-          .collection('diagnostics')
-          .doc(userId)
-          .collection('records')
-          .orderBy('timestamp', descending: true)
-          .limit(limit);
+      final docs = await storage.queryCollection(
+        'diagnostics/$userId/records',
+        limit: limit,
+      );
+
+      var results = docs.map((data) => _diagnosticFromMap(data)).toList();
 
       if (carId != null) {
-        query = query.where('carId', isEqualTo: carId);
+        results = results.where((d) => d.carId == carId).toList();
       }
 
-      final snapshot = await query.get();
-      
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return _diagnosticFromMap(data);
-      }).toList();
+      return results;
     } catch (e) {
       return [];
     }
@@ -84,19 +78,17 @@ class DiagnosticRepositoryImpl implements DiagnosticRepository {
 
   @override
   Future<DiagnosticEntity?> getDiagnosticById(String diagnosticId) async {
-    // Implementation for getting specific diagnostic
     return null;
   }
 
   @override
   Future<void> saveDiagnostic(DiagnosticEntity diagnostic) async {
     try {
-      await firestore
-          .collection('diagnostics')
-          .doc(diagnostic.userId)
-          .collection('records')
-          .doc(diagnostic.id)
-          .set(_diagnosticToMap(diagnostic));
+      await storage.saveJson(
+        'diagnostics/${diagnostic.userId}/records',
+        diagnostic.id,
+        _diagnosticToMap(diagnostic),
+      );
     } catch (e) {
       // Handle error
     }

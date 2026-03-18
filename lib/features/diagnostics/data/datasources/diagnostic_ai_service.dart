@@ -1,4 +1,5 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:carseva/core/api/ai_client.dart';
+import 'package:carseva/core/utils/json_extractor.dart';
 import 'package:carseva/features/diagnostics/domain/entities/symptom.dart';
 import 'package:carseva/features/diagnostics/domain/entities/diagnosis_result.dart';
 import 'package:carseva/features/diagnostics/domain/entities/severity_level.dart';
@@ -6,9 +7,9 @@ import 'dart:convert';
 import 'dart:math';
 
 class DiagnosticAIService {
-  final GenerativeModel model;
+  final _aiClient = UnifiedAIClient();
 
-  DiagnosticAIService(this.model);
+  DiagnosticAIService();
 
   Future<DiagnosisResult> analyzeSymptoms({
     required List<Symptom> symptoms,
@@ -20,24 +21,12 @@ class DiagnosticAIService {
       carContext: carContext,
       voiceTranscript: voiceTranscript,
     );
-
     try {
-      print('🔍 Sending diagnostic request to AI...');
+      final responseText = await _aiClient.generateContent(prompt, systemInstruction: 'Analyze vehicle symptoms and respond ONLY with valid JSON.');
       
-      // Add timeout to prevent infinite waiting
-      final response = await model.generateContent([Content.text(prompt)])
-          .timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Request timed out. Please check your internet connection and try again.');
-        },
-      );
+      print('✅ AI Response received: ${responseText.substring(0, min(100, responseText.length))}...');
       
-      final responseText = response.text;
-      
-      print('✅ AI Response received: ${responseText?.substring(0, min(100, responseText.length))}...');
-      
-      if (responseText == null || responseText.isEmpty) {
+      if (responseText.isEmpty) {
         print('❌ Empty response from AI');
         throw Exception('Empty response from AI. Please try again.');
       }
@@ -129,28 +118,7 @@ Costs in INR.''';
   }
 
   Map<String, dynamic> _extractJson(String text) {
-    // Remove markdown code blocks if present
-    String cleanText = text.trim();
-    
-    // Remove ```json and ``` markers
-    cleanText = cleanText.replaceAll(RegExp(r'```json\s*'), '');
-    cleanText = cleanText.replaceAll(RegExp(r'```\s*$'), '');
-    cleanText = cleanText.trim();
-    
-    // Try to find JSON in the response
-    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(cleanText);
-    if (jsonMatch != null) {
-      try {
-        final jsonStr = jsonMatch.group(0)!;
-        print('🔍 Extracted JSON: ${jsonStr.substring(0, min(100, jsonStr.length))}...');
-        return json.decode(jsonStr);
-      } catch (e) {
-        print('❌ JSON decode error: $e');
-        return {};
-      }
-    }
-    print('❌ No JSON found in response');
-    return {};
+    return JsonExtractor.extractObject(text);
   }
 
   DiagnosisResult _parseDiagnosisResult(Map<String, dynamic> json) {

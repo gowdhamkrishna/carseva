@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/core/auth/local_user.dart';
 
 abstract class AuthBlocState extends Equatable {
   @override
@@ -11,7 +11,7 @@ class AuthInitialState extends AuthBlocState {}
 class AuthLoadingState extends AuthBlocState {}
 
 class AuthSuccessState extends AuthBlocState {
-  final User user;
+  final LocalUser user;
 
   AuthSuccessState(this.user);
 
@@ -27,4 +27,3 @@ class AuthFailureState extends AuthBlocState {
   @override
   List<Object?> get props => [message];
 }
-

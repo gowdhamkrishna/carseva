@@ -1,18 +1,12 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:carseva/core/api/ai_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import '../domain/models/mechanic_model.dart';
 
 class MechanicAIService {
-  late final GenerativeModel _model;
+  final _aiClient = UnifiedAIClient();
 
-  MechanicAIService() {
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-    _model = GenerativeModel(
-      model: 'gemini-pro',
-      apiKey: apiKey,
-    );
-  }
+  MechanicAIService();
 
   /// Generate 2-3 realistic mechanics near user's location using AI
   Future<List<Mechanic>> generateNearbyMechanics(double latitude, double longitude) async {
@@ -55,21 +49,29 @@ Return ONLY valid JSON array, no markdown, no explanation:
 ]
 ''';
 
-      final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
-      final text = response.text ?? '';
+      final responseText = await _aiClient.generateContent(prompt);
+      final text = responseText;
 
-      // Clean response - remove markdown code blocks if present
+      // Clean response - extract JSON array from any surrounding text
       String cleanedText = text.trim();
-      if (cleanedText.startsWith('```json')) {
-        cleanedText = cleanedText.substring(7);
-      } else if (cleanedText.startsWith('```')) {
-        cleanedText = cleanedText.substring(3);
-      }
-      if (cleanedText.endsWith('```')) {
-        cleanedText = cleanedText.substring(0, cleanedText.length - 3);
-      }
+      
+      // Remove markdown code blocks
+      cleanedText = cleanedText.replaceAll(RegExp(r'```json\s*'), '');
+      cleanedText = cleanedText.replaceAll(RegExp(r'```\s*'), '');
       cleanedText = cleanedText.trim();
+      
+      // Find the JSON array by locating [ and matching ]
+      final startIndex = cleanedText.indexOf('[');
+      if (startIndex == -1) throw FormatException('No JSON array found');
+      int bracketCount = 0;
+      int endIndex = -1;
+      for (int i = startIndex; i < cleanedText.length; i++) {
+        if (cleanedText[i] == '[') bracketCount++;
+        if (cleanedText[i] == ']') bracketCount--;
+        if (bracketCount == 0) { endIndex = i; break; }
+      }
+      if (endIndex == -1) throw FormatException('Unmatched JSON brackets');
+      cleanedText = cleanedText.substring(startIndex, endIndex + 1);
 
       // Parse JSON
       final List<dynamic> jsonList = json.decode(cleanedText);

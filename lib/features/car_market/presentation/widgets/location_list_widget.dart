@@ -401,9 +401,13 @@ class LocationListWidget extends StatelessWidget {
   }
 
   void _makePhoneCall(String phoneNumber) async {
-    final uri = Uri.parse('tel:$phoneNumber');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+    // Clean the phone number — strip spaces, dashes, etc.
+    final cleaned = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri(scheme: 'tel', path: cleaned);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Could not launch dialer: $e');
     }
   }
 

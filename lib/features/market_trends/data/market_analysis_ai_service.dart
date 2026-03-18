@@ -1,28 +1,11 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:carseva/core/api/ai_client.dart';
+import 'package:carseva/core/utils/json_extractor.dart';
 import 'dart:convert';
 
-
-// Interface for AI operations to allow mocking
-abstract class GenerativeAIClient {
-  Future<GenerateContentResponse> generateContent(Iterable<Content> prompt);
-}
-
-// Concrete implementation using Google Generative AI
-class GoogleGenerativeAIClient implements GenerativeAIClient {
-  final GenerativeModel _model;
-  
-  GoogleGenerativeAIClient(this._model);
-  
-  @override
-  Future<GenerateContentResponse> generateContent(Iterable<Content> prompt) {
-    return _model.generateContent(prompt);
-  }
-}
-
 class MarketAnalysisAIService {
-  final GenerativeAIClient _client;
+  final _aiClient = UnifiedAIClient();
 
-  MarketAnalysisAIService(this._client);
+  MarketAnalysisAIService();
 
   Future<Map<String, dynamic>> getMarketTrends({
     required String segment, // 'new' or 'used'
@@ -32,17 +15,7 @@ class MarketAnalysisAIService {
     final prompt = _buildMarketPrompt(segment: segment, carMake: carMake, carModel: carModel);
 
     try {
-      print('📊 Requesting market analysis from AI...');
-      
-      final response = await _client.generateContent([Content.text(prompt)])
-          .timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Request timed out');
-        },
-      );
-      
-      final responseText = response.text;
+      final responseText = await _aiClient.generateContent(prompt, systemInstruction: 'Provide Indian car market trends and respond ONLY with valid JSON.');
       print('✅ Market AI Response received');
       
       if (responseText == null || responseText.isEmpty) {
@@ -83,7 +56,7 @@ Respond ONLY with valid JSON (no markdown):
   ],
   "priceTrend": {
     "months": ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    "values": [100, 102, 104, 106, 108, 110]
+    "values": [100.0, 105.5, 98.2, 112.4, 118.0, 125.2]
   },
   "insights": [
     "SUVs showing strong demand",
@@ -92,25 +65,12 @@ Respond ONLY with valid JSON (no markdown):
 }
 
 Provide 6-8 top selling cars with realistic Indian market data.
+Include significant variance in the "values" array for price trends to show market fluctuations.
 ${segment == 'new' ? 'Price changes should be positive (inflation)' : 'Price changes should be negative (depreciation)'}.
 Sales in units/month, prices in INR.''';
   }
 
   Map<String, dynamic> _extractJson(String text) {
-    String cleanText = text.trim();
-    cleanText = cleanText.replaceAll(RegExp(r'```json\s*'), '');
-    cleanText = cleanText.replaceAll(RegExp(r'```\s*$'), '');
-    cleanText = cleanText.trim();
-    
-    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(cleanText);
-    if (jsonMatch != null) {
-      try {
-        return json.decode(jsonMatch.group(0)!);
-      } catch (e) {
-        print('❌ JSON decode error: $e');
-        throw Exception('Failed to parse AI response');
-      }
-    }
-    throw Exception('No valid JSON found in response');
+    return JsonExtractor.extractObject(text);
   }
 }

@@ -1,7 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/core/auth/local_user.dart';
 
 abstract class AuthRepository {
-  Future<User?> register(String email, String password);
-  Future<User?> login(String email, String password);
-  Future<User?> googleLogin();
+  Future<LocalUser?> register(String email, String password);
+  Future<LocalUser?> login(String email, String password);
+  Future<LocalUser?> googleLogin();
 }

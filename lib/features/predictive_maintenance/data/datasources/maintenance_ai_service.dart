@@ -1,14 +1,16 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:carseva/core/api/ai_client.dart';
+import 'package:carseva/core/utils/json_extractor.dart';
 import 'package:carseva/features/predictive_maintenance/domain/entities/maintenance_prediction_entity.dart';
 import 'package:carseva/features/predictive_maintenance/domain/entities/health_score_entity.dart';
 import 'package:carseva/features/predictive_maintenance/domain/entities/component_health.dart';
 import 'package:carseva/features/predictive_maintenance/domain/entities/service_record.dart';
 import 'dart:convert';
+import 'dart:math' as math;
 
 class MaintenanceAIService {
-  final GenerativeModel model;
+  final _aiClient = UnifiedAIClient();
 
-  MaintenanceAIService(this.model);
+  MaintenanceAIService();
 
   Future<List<MaintenancePredictionEntity>> predictMaintenance({
     required String carId,
@@ -21,20 +23,9 @@ class MaintenanceAIService {
     );
 
     try {
-      print('🔮 Sending maintenance prediction request to AI...');
+      final responseText = await _aiClient.generateContent(prompt, systemInstruction: 'You are a predictive maintenance AI for vehicles.');
       
-      // Add timeout to prevent infinite waiting
-      final response = await model.generateContent([Content.text(prompt)])
-          .timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Request timed out. Please check your internet connection and try again.');
-        },
-      );
-      
-      final responseText = response.text;
-      
-      print('✅ Maintenance AI Response received: ${responseText?.substring(0, 100)}...');
+      print('✅ Maintenance AI Response received: ${responseText.substring(0, math.min(100, responseText.length))}...');
       
       if (responseText == null || responseText.isEmpty) {
         print('❌ Empty response from maintenance AI');
@@ -69,20 +60,9 @@ class MaintenanceAIService {
     );
 
     try {
-      print('🏥 Sending health score request to AI...');
+      final responseText = await _aiClient.generateContent(prompt, systemInstruction: 'Analyze vehicle health and respond ONLY with valid JSON.');
       
-      // Add timeout to prevent infinite waiting
-      final response = await model.generateContent([Content.text(prompt)])
-          .timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('Request timed out. Please check your internet connection and try again.');
-        },
-      );
-      
-      final responseText = response.text;
-      
-      print('✅ Health AI Response received: ${responseText?.substring(0, 100)}...');
+      print('✅ Health AI Response received: ${responseText.substring(0, math.min(100, responseText.length))}...');
       
       if (responseText == null || responseText.isEmpty) {
         print('❌ Empty response from health AI');
@@ -211,25 +191,7 @@ Scores: 0-100''';
   }
 
   Map<String, dynamic> _extractJson(String text) {
-    // Remove markdown code blocks if present
-    String cleanText = text.trim();
-    
-    // Remove ```json and ``` markers
-    cleanText = cleanText.replaceAll(RegExp(r'```json\s*'), '');
-    cleanText = cleanText.replaceAll(RegExp(r'```\s*$'), '');
-    cleanText = cleanText.trim();
-    
-    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(cleanText);
-    if (jsonMatch != null) {
-      try {
-        return json.decode(jsonMatch.group(0)!);
-      } catch (e) {
-        print('❌ Maintenance JSON decode error: $e');
-        return {};
-      }
-    }
-    print('❌ No JSON found in maintenance response');
-    return {};
+    return JsonExtractor.extractObject(text);
   }
 
   List<MaintenancePredictionEntity> _parseMaintenancePredictions(

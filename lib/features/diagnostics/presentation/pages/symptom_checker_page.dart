@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/features/auth/data/repositories/auth_implement.dart';
 import 'package:carseva/features/diagnostics/presentation/bloc/diagnostic_bloc.dart';
 import 'package:carseva/features/diagnostics/presentation/bloc/diagnostic_event.dart';
 import 'package:carseva/features/diagnostics/presentation/bloc/diagnostic_state.dart';
@@ -424,8 +424,8 @@ class _SymptomCheckerPageState extends State<SymptomCheckerPage> {
     }
   }
 
-  void _analyzeSymptoms() {
-    final user = FirebaseAuth.instance.currentUser;
+  void _analyzeSymptoms() async {
+    final user = await AuthRepositoryImpl.getCurrentUser();
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please login first')),

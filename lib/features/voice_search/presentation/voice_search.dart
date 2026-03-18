@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -217,36 +218,62 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
 
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.auto_awesome, color: Color(0xFF6C63FF), size: 28),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              "Voice Assistant",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
+      padding: const EdgeInsets.all(16),
+      child: _buildGlassContainer(
+        sigma: 15,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Color(0xFF6C63FF), size: 28),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  "Voice Assistant",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
+              BlocBuilder<AiBloc, AiState>(
+                builder: (context, state) {
+                  if (state.messages.isNotEmpty) {
+                    return IconButton(
+                      icon: const Icon(Icons.clear_all, color: Colors.white70),
+                      onPressed: () {
+                        context.read<AiBloc>().add(ClearConversationEvent());
+                      },
+                      tooltip: 'Clear conversation',
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassContainer({required Widget child, double sigma = 10}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1.5,
             ),
           ),
-          BlocBuilder<AiBloc, AiState>(
-            builder: (context, state) {
-              if (state.messages.isNotEmpty) {
-                return IconButton(
-                  icon: const Icon(Icons.clear_all, color: Colors.white70),
-                  onPressed: () {
-                    context.read<AiBloc>().add(ClearConversationEvent());
-                  },
-                  tooltip: 'Clear conversation',
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
+          child: child,
+        ),
       ),
     );
   }
@@ -260,7 +287,7 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
 
         return ListView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.only(bottom: 100),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
           itemCount: state.messages.length + (state is AiLoading ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == state.messages.length) {
@@ -305,7 +332,7 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
             ),
             const SizedBox(height: 32),
             const Text(
-              "Start a conversation",
+              "How can I help you?",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -316,10 +343,10 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                "Type your message or tap the microphone to ask about car maintenance, diagnostics, or service centers",
+                "Ask me about car maintenance, diagnostics, or nearby services.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withOpacity(0.5),
                   fontSize: 16,
                   height: 1.5,
                 ),
@@ -337,47 +364,31 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
       left: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
               Colors.transparent,
-              const Color(0xFF0A0E27).withOpacity(0.95),
+              const Color(0xFF0A0E27).withOpacity(0.8),
               const Color(0xFF0A0E27),
             ],
           ),
         ),
         child: Row(
           children: [
-            // Text input field
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF1A1F3A).withOpacity(0.8),
-                      const Color(0xFF2D3561).withOpacity(0.6),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: const Color(0xFF6C63FF).withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
+              child: _buildGlassContainer(
+                sigma: 15,
                 child: TextField(
                   controller: _textController,
                   focusNode: _focusNode,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                   decoration: InputDecoration(
-                    hintText: 'Type your message...',
+                    hintText: 'Ask anything...',
                     hintStyle: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withOpacity(0.3),
                       fontSize: 16,
                     ),
                     border: InputBorder.none,
@@ -385,21 +396,12 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
                       horizontal: 20,
                       vertical: 14,
                     ),
-                    prefixIcon: Icon(
-                      Icons.chat_bubble_outline,
-                      color: const Color(0xFF6C63FF).withOpacity(0.7),
-                      size: 22,
-                    ),
                   ),
-                  textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _sendTextMessage(),
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            // Voice/Send button
             GestureDetector(
               onTap: () {
                 if (_textController.text.trim().isNotEmpty) {
@@ -408,51 +410,33 @@ class _VoiceSearchPageState extends State<VoiceSearchPage>
                   _toggleListening();
                 }
               },
-              child: AnimatedBuilder(
-                animation: _pulseController,
-                builder: (_, __) => Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: isListening
-                          ? [
-                              const Color(0xFFFF6584),
-                              const Color(0xFFFF6584).withOpacity(0.8),
-                            ]
-                          : _textController.text.trim().isNotEmpty
-                              ? [
-                                  const Color(0xFF4CAF50),
-                                  const Color(0xFF4CAF50).withOpacity(0.8),
-                                ]
-                              : [
-                                  const Color(0xFF6C63FF),
-                                  const Color(0xFF6C63FF).withOpacity(0.8),
-                                ],
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: isListening
+                        ? [const Color(0xFFFF6584), const Color(0xFFFF6584).withOpacity(0.7)]
+                        : [const Color(0xFF6C63FF), const Color(0xFF6C63FF).withOpacity(0.7)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isListening ? const Color(0xFFFF6584) : const Color(0xFF6C63FF))
+                          .withOpacity(0.4),
+                      blurRadius: 15,
+                      spreadRadius: 2,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isListening
-                                ? const Color(0xFFFF6584)
-                                : _textController.text.trim().isNotEmpty
-                                    ? const Color(0xFF4CAF50)
-                                    : const Color(0xFF6C63FF))
-                            .withOpacity(isListening ? 0.6 : 0.4),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    isListening
-                        ? Icons.mic
-                        : _textController.text.trim().isNotEmpty
-                            ? Icons.send
-                            : Icons.mic_none,
-                    size: 26,
-                    color: Colors.white,
-                  ),
+                  ],
+                ),
+                child: Icon(
+                  isListening
+                      ? Icons.mic
+                      : _textController.text.trim().isNotEmpty
+                          ? Icons.send
+                          : Icons.mic_none,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
             ),

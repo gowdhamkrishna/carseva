@@ -1,7 +1,7 @@
 import 'package:carseva/features/auth/domain/usecases/google_login.dart';
 import 'package:carseva/features/auth/presentation/bloc/auth_event.dart';
 import 'package:carseva/features/auth/presentation/bloc/auth_state.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/features/auth/data/repositories/auth_implement.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:carseva/features/auth/domain/usecases/login_usecase.dart';
 import 'package:carseva/features/auth/domain/usecases/register.dart';
@@ -26,7 +26,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
       );
     });
     on<CheckAuthStatusEvent>((event, emit) async {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = await AuthRepositoryImpl.getCurrentUser();
 
       if (user != null) {
         emit(AuthSuccessState(user));
@@ -51,7 +51,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthBlocState> {
         if (user != null) {
           emit(AuthSuccessState(user));
         } else {
-          emit(AuthFailureState("Google login failed"));
+          emit(AuthFailureState("Google login is not available in offline mode"));
         }
       } catch (e) {
         emit(AuthFailureState(e.toString()));

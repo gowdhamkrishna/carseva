@@ -9,7 +9,7 @@ import 'package:carseva/core/user_profile/bloc/user_profile_bloc.dart';
 import 'package:carseva/core/user_profile/bloc/user_profile_event.dart';
 import 'package:carseva/core/constants/car_data_constants.dart';
 import 'package:carseva/core/widgets/autocomplete_text_field.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/features/auth/data/repositories/auth_implement.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -444,7 +444,7 @@ class _AddVehicleFormPageState extends State<AddVehicleFormPage> {
     }
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState!.validate()) {
       final vehicle = UserCarEntity(
         vehicle: VehicleInfo(
@@ -483,7 +483,8 @@ class _AddVehicleFormPageState extends State<AddVehicleFormPage> {
         ),
       );
 
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final user = await AuthRepositoryImpl.getCurrentUser();
+      final userId = user?.uid;
       if (userId != null) {
         context.read<UserProfileBloc>().add(
               UpdateVehicleEvent(userId: userId, vehicle: vehicle),

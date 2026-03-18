@@ -1,29 +1,26 @@
 import 'package:carseva/carinfo/data/models/user_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:carseva/core/storage/local_storage_service.dart';
 
 class UserCarRemoteDataSource {
-  final FirebaseFirestore firestore;
+  final LocalStorageService storage;
 
-  UserCarRemoteDataSource(this.firestore);
+  UserCarRemoteDataSource(this.storage);
 
   Future<void> saveCar(String userId, UserCarModel model) async {
-    await firestore
-        .collection('users')
-        .doc(userId)
-        .collection('current_car')
-        .doc('active')
-        .set(model.toFirestore(), SetOptions(merge: true));
+    await storage.saveJson(
+      'users/$userId/current_car',
+      'active',
+      model.toFirestore(),
+    );
   }
 
   Future<UserCarModel?> getCar(String userId) async {
-    final doc = await firestore
-        .collection('users')
-        .doc(userId)
-        .collection('current_car')
-        .doc('active')
-        .get();
+    final data = await storage.getJson(
+      'users/$userId/current_car',
+      'active',
+    );
 
-    if (!doc.exists) return null;
-    return UserCarModel.fromFirestore(doc.data()!);
+    if (data == null) return null;
+    return UserCarModel.fromFirestore(data);
   }
 }

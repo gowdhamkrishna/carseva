@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:carseva/features/auth/data/repositories/auth_implement.dart';
 import 'package:carseva/features/diagnostics/presentation/bloc/diagnostic_bloc.dart';
 import 'package:carseva/features/diagnostics/presentation/bloc/diagnostic_event.dart';
 import 'package:carseva/features/diagnostics/presentation/bloc/diagnostic_state.dart';
@@ -21,8 +21,8 @@ class _DiagnosticDashboardPageState extends State<DiagnosticDashboardPage> {
     _loadHistory();
   }
 
-  void _loadHistory() {
-    final user = FirebaseAuth.instance.currentUser;
+  void _loadHistory() async {
+    final user = await AuthRepositoryImpl.getCurrentUser();
     if (user != null) {
       context.read<DiagnosticBloc>().add(
             LoadDiagnosticHistoryEvent(userId: user.uid),

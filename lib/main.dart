@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'firebase_options.dart';
 import 'package:carseva/core/api/ai_client.dart';
 import 'package:carseva/core/bloc/theme_bloc.dart';
 import 'package:carseva/config/theme/Theme.dart';
+import 'package:carseva/core/storage/local_storage_service.dart';
 
 import 'package:carseva/features/auth/data/repositories/auth_implement.dart';
 import 'package:carseva/features/auth/domain/usecases/google_login.dart';
@@ -32,8 +31,6 @@ import 'package:carseva/carinfo/domain/repositories/implem.dart';
 import 'package:carseva/carinfo/domain/usecases/get_current_car.dart';
 import 'package:carseva/carinfo/domain/usecases/save_current.dart';
 import 'package:carseva/core/user_profile/bloc/user_profile_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:carseva/features/diagnostics/data/datasources/diagnostic_ai_service.dart';
 import 'package:carseva/features/diagnostics/data/repositories/diagnostic_repository_impl.dart';
@@ -56,46 +53,40 @@ Future<void> main() async {
 
   await dotenv.load(fileName: ".env");
 
-  // ✅ INIT FIREBASE with DefaultFirebaseOptions
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // ✅ INIT LOCAL STORAGE
+  await LocalStorageService.instance.init();
 
   // ✅ AI DEPENDENCY CHAIN with system prompt
-  final geminiClient = GeminiClient(systemInstruction: SystemPrompt.text);
-  final aiRepository = AiRepositoryImpl(geminiClient);
+  final aiRepository = AiRepositoryImpl(SystemPrompt.text);
   final generateText = GenerateText(aiRepository);
 
   // ✅ MARKET DEPENDENCY CHAIN
-  final marketGeminiClient = GeminiClient(); // No system prompt for market API
-  final marketRepository = MarketRepositoryImpl(marketGeminiClient);
+  final marketRepository = MarketRepositoryImpl();
   final getTrendingCars = GetTrendingCars(marketRepository);
   final getMarketInsights = GetMarketInsights(marketRepository);
   final predictAvailability = PredictAvailability(marketRepository);
   final getPricePrediction = GetPricePrediction(marketRepository);
 
-  // ✅ CAR INFO DEPENDENCY CHAIN
-  final carInfoDataSource = UserCarRemoteDataSource(FirebaseFirestore.instance);
+  // ✅ CAR INFO DEPENDENCY CHAIN (local storage)
+  final carInfoDataSource = UserCarRemoteDataSource(LocalStorageService.instance);
   final carInfoRepository = UserCarRepositoryImpl(carInfoDataSource);
   final getCurrentCar = GetCurrentCar(carInfoRepository);
   final saveCurrentCar = SaveCurrentCar(carInfoRepository);
 
-  // ✅ DIAGNOSTIC DEPENDENCY CHAIN
-  final diagnosticGeminiClient = GeminiClient();
-  final diagnosticAIService = DiagnosticAIService(diagnosticGeminiClient.textModel);
+  // ✅ DIAGNOSTIC DEPENDENCY CHAIN (local storage)
+  final diagnosticAIService = DiagnosticAIService();
   final diagnosticRepository = DiagnosticRepositoryImpl(
     aiService: diagnosticAIService,
-    firestore: FirebaseFirestore.instance,
+    storage: LocalStorageService.instance,
   );
   final analyzeSymptoms = AnalyzeSymptoms(diagnosticRepository);
   final getDiagnosticHistory = GetDiagnosticHistory(diagnosticRepository);
 
-  // ✅ MAINTENANCE DEPENDENCY CHAIN
-  final maintenanceGeminiClient = GeminiClient();
-  final maintenanceAIService = MaintenanceAIService(maintenanceGeminiClient.textModel);
+  // ✅ MAINTENANCE DEPENDENCY CHAIN (local storage)
+  final maintenanceAIService = MaintenanceAIService();
   final maintenanceRepository = MaintenanceRepositoryImpl(
     aiService: maintenanceAIService,
-    firestore: FirebaseFirestore.instance,
+    storage: LocalStorageService.instance,
   );
   final predictMaintenance = PredictMaintenance(maintenanceRepository);
   final calculateHealthScore = CalculateHealthScore(maintenanceRepository);
@@ -141,7 +132,7 @@ Future<void> main() async {
           ),
         ),
 
-        // 🔐 AUTH
+        // 🔐 AUTH (local storage)
         BlocProvider(
           create: (_) => AuthBloc(
             loginUseCase: LoginUseCase(AuthRepositoryImpl()),
@@ -150,12 +141,11 @@ Future<void> main() async {
           )..add(CheckAuthStatusEvent()),
         ),
 
-        // 👤 USER PROFILE
+        // 👤 USER PROFILE (local storage)
         BlocProvider(
           create: (_) => UserProfileBloc(
             getCurrentCar: getCurrentCar,
             saveCurrentCar: saveCurrentCar,
-            firebaseAuth: FirebaseAuth.instance,
           ),
         ),
       ],

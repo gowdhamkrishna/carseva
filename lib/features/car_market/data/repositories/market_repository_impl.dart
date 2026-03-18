@@ -1,15 +1,15 @@
 import 'dart:convert';
 
 import 'package:carseva/core/api/ai_client.dart';
+import 'package:carseva/core/utils/json_extractor.dart';
 import 'package:carseva/features/car_market/domain/models/availability_prediction.dart';
 import 'package:carseva/features/car_market/domain/models/car_model.dart';
 import 'package:carseva/features/car_market/domain/repositories/market_repository.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 
 class MarketRepositoryImpl implements MarketRepository {
-  final GeminiClient geminiClient;
+  final _aiClient = UnifiedAIClient();
 
-  MarketRepositoryImpl(this.geminiClient);
+  MarketRepositoryImpl();
 
   @override
   Future<List<CarModel>> getTrendingCars({
@@ -58,17 +58,9 @@ Return ONLY valid JSON array, no markdown, no explanation. Example format:
 ]''';
 
     try {
-      final response = await geminiClient.textModel.generateContent([
-        Content.text(prompt),
-      ]);
-
-      String responseText = response.text ?? '[]';
-      // Clean response - remove markdown code blocks if present
-      responseText = responseText.replaceAll(RegExp(r'```json\n?'), '');
-      responseText = responseText.replaceAll(RegExp(r'```\n?'), '');
-      responseText = responseText.trim();
-
-      final List<dynamic> jsonList = jsonDecode(responseText);
+      final responseText = await _aiClient.generateContent(prompt);
+      final List<dynamic> jsonList = JsonExtractor.extractArray(responseText);
+      if (jsonList.isEmpty) throw Exception('No car data found in response');
       return jsonList.map((json) => _carFromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to fetch trending cars: $e');
@@ -94,11 +86,9 @@ Include:
 
 Keep response concise (300-400 words), structured, and actionable.''';
 
-    final response = await geminiClient.textModel.generateContent([
-      Content.text(prompt),
-    ]);
+    final responseText = await _aiClient.generateContent(prompt);
 
-    return response.text ?? 'Unable to generate market insights.';
+    return responseText;
   }
 
   @override
@@ -148,16 +138,9 @@ Return ONLY valid JSON, no markdown. Example:
 }''';
 
     try {
-      final response = await geminiClient.textModel.generateContent([
-        Content.text(prompt),
-      ]);
-
-      String responseText = response.text ?? '{}';
-      responseText = responseText.replaceAll(RegExp(r'```json\n?'), '');
-      responseText = responseText.replaceAll(RegExp(r'```\n?'), '');
-      responseText = responseText.trim();
-
-      final Map<String, dynamic> json = jsonDecode(responseText);
+      var responseText = await _aiClient.generateContent(prompt);
+      final Map<String, dynamic> json = JsonExtractor.extractObject(responseText);
+      if (json.isEmpty) throw Exception('No availability data found in response');
 
       // Parse locations
       List<CarLocation> locations = [];
@@ -207,16 +190,10 @@ Return ONLY valid JSON, no markdown. Example:
 }''';
 
     try {
-      final response = await geminiClient.textModel.generateContent([
-        Content.text(prompt),
-      ]);
-
-      String responseText = response.text ?? '{}';
-      responseText = responseText.replaceAll(RegExp(r'```json\n?'), '');
-      responseText = responseText.replaceAll(RegExp(r'```\n?'), '');
-      responseText = responseText.trim();
-
-      return jsonDecode(responseText) as Map<String, dynamic>;
+      var responseText = await _aiClient.generateContent(prompt);
+      final result = JsonExtractor.extractObject(responseText);
+      if (result.isEmpty) throw Exception('No price data found in response');
+      return result;
     } catch (e) {
       throw Exception('Failed to get price prediction: $e');
     }

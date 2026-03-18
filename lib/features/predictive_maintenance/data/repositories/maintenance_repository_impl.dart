@@ -3,15 +3,15 @@ import 'package:carseva/features/predictive_maintenance/domain/entities/health_s
 import 'package:carseva/features/predictive_maintenance/domain/entities/service_record.dart';
 import 'package:carseva/features/predictive_maintenance/domain/repositories/maintenance_repository.dart';
 import 'package:carseva/features/predictive_maintenance/data/datasources/maintenance_ai_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:carseva/core/storage/local_storage_service.dart';
 
 class MaintenanceRepositoryImpl implements MaintenanceRepository {
   final MaintenanceAIService aiService;
-  final FirebaseFirestore firestore;
+  final LocalStorageService storage;
 
   MaintenanceRepositoryImpl({
     required this.aiService,
-    required this.firestore,
+    required this.storage,
   });
 
   @override
@@ -39,17 +39,18 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
       serviceHistory: serviceHistory,
     );
 
-    // Save to Firestore
+    // Save locally
     try {
-      await firestore
-          .collection('health_scores')
-          .doc(carId)
-          .set({
-        'carId': carId,
-        'overallScore': healthScore.overallScore,
-        'lastUpdated': healthScore.lastUpdated.toIso8601String(),
-        'recommendations': healthScore.recommendations,
-      });
+      await storage.saveJson(
+        'health_scores',
+        carId,
+        {
+          'carId': carId,
+          'overallScore': healthScore.overallScore,
+          'lastUpdated': healthScore.lastUpdated.toIso8601String(),
+          'recommendations': healthScore.recommendations,
+        },
+      );
     } catch (e) {
       // Handle error
     }
@@ -62,10 +63,7 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
     required String carId,
     int monthsAhead = 6,
   }) async {
-    // Get service history
     final serviceHistory = await getServiceHistory(carId: carId);
-    
-    // Get predictions from AI
     return await predictMaintenance(
       carId: carId,
       serviceHistory: serviceHistory,
@@ -78,18 +76,14 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
     int limit = 20,
   }) async {
     try {
-      final snapshot = await firestore
-          .collection('service_history')
-          .doc(carId)
-          .collection('records')
-          .orderBy('serviceDate', descending: true)
-          .limit(limit)
-          .get();
+      final docs = await storage.queryCollection(
+        'service_history/$carId/records',
+        limit: limit,
+      );
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
+      return docs.map((data) {
         return ServiceRecord(
-          id: doc.id,
+          id: data['id'] ?? '',
           carId: carId,
           serviceDate: DateTime.parse(data['serviceDate']),
           mileageAtService: data['mileageAtService'],
@@ -112,22 +106,22 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
   @override
   Future<void> addServiceRecord(ServiceRecord record) async {
     try {
-      await firestore
-          .collection('service_history')
-          .doc(record.carId)
-          .collection('records')
-          .doc(record.id)
-          .set({
-        'serviceDate': record.serviceDate.toIso8601String(),
-        'mileageAtService': record.mileageAtService,
-        'serviceType': record.serviceType,
-        'serviceCenter': record.serviceCenter,
-        'cost': record.cost,
-        'partsReplaced': record.partsReplaced,
-        'notes': record.notes,
-        'photoUrls': record.photoUrls,
-        'mechanicRating': record.mechanicRating,
-      });
+      await storage.saveJson(
+        'service_history/${record.carId}/records',
+        record.id,
+        {
+          'id': record.id,
+          'serviceDate': record.serviceDate.toIso8601String(),
+          'mileageAtService': record.mileageAtService,
+          'serviceType': record.serviceType,
+          'serviceCenter': record.serviceCenter,
+          'cost': record.cost,
+          'partsReplaced': record.partsReplaced,
+          'notes': record.notes,
+          'photoUrls': record.photoUrls,
+          'mechanicRating': record.mechanicRating,
+        },
+      );
     } catch (e) {
       // Handle error
     }
@@ -148,7 +142,6 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
     required String carId,
     int limit = 30,
   }) async {
-    // Implementation for getting health score history
     return [];
   }
 }
